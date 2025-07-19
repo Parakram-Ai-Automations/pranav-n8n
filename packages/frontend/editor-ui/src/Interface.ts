@@ -1177,6 +1177,7 @@ export type ExecutionFilterType = {
 	annotationTags: string[];
 	vote: ExecutionFilterVote;
 	metadata: ExecutionFilterMetadata[];
+	nodesExecuted?: string[];
 };
 
 export type ExecutionsQueryFilter = {
@@ -1190,6 +1191,7 @@ export type ExecutionsQueryFilter = {
 	startedBefore?: string;
 	annotationTags?: string[];
 	vote?: ExecutionFilterVote;
+	nodesExecuted?: string[];
 };
 
 export interface CloudPlanState {
