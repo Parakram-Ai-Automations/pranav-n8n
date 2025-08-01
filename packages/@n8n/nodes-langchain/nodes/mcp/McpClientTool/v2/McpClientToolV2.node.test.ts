@@ -1,13 +1,13 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { mock } from 'jest-mock-extended';
+import { NodeOperationError } from 'n8n-workflow';
 import type {
 	ICredentialDataDecryptedObject,
 	NodeConnectionTypes,
-	NodeOperationError,
-	type ILoadOptionsFunctions,
-	type INode,
-	type ISupplyDataFunctions,
+	ILoadOptionsFunctions,
+	INode,
+	ISupplyDataFunctions,
 } from 'n8n-workflow';
 
 import { getTools } from './loadOptions';
@@ -81,6 +81,37 @@ describe('McpClientToolV2', () => {
 				headers: {
 					Accept: 'text/event-stream',
 					Authorization: 'Basic bXktaGVhZGVyOmhlYWRlci12YWx1ZQ==',
+				},
+			});
+		});
+
+		it('should support http custom auth with headers', async () => {
+			const supplyDataResult = await buildNode().supplyData.call(
+				buildMocks('httpCustomAuth', { headers: { 'my-header': 'header-value' } }),
+				0,
+			);
+
+			expect(supplyDataResult.closeFunction).toBeInstanceOf(Function);
+			expect(supplyDataResult.response).toBeInstanceOf(McpToolkit);
+
+			const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(mock());
+			const url = new URL('https://my-mcp-endpoint.ai/sse');
+			expect(SSEClientTransport).toHaveBeenCalledTimes(1);
+			expect(SSEClientTransport).toHaveBeenCalledWith(url, {
+				eventSourceInit: { fetch: expect.any(Function) },
+				requestInit: {
+					headers: {
+						'my-header': 'header-value',
+					},
+				},
+			});
+
+			const customFetch = jest.mocked(SSEClientTransport).mock.calls[0][1]?.eventSourceInit?.fetch;
+			await customFetch?.(url);
+			expect(fetchSpy).toHaveBeenCalledWith(url, {
+				headers: {
+					Accept: 'text/event-stream',
+					'my-header': 'header-value',
 				},
 			});
 		});
@@ -176,9 +207,9 @@ describe('McpClientToolV2', () => {
 		});
 
 		it('should handle errors', async () => {
+			const node = mock<INode>({ typeVersion: 2 });
 			jest.spyOn(Client.prototype, 'connect').mockRejectedValue(new Error('Fail!'));
 
-			const node = mock<INode>({ typeVersion: 2 });
 			await expect(
 				getTools.call(mock<ILoadOptionsFunctions>({ getNode: jest.fn(() => node) })),
 			).rejects.toEqual(new NodeOperationError(node, 'Could not connect to your MCP server'));
