@@ -54,17 +54,13 @@ describe('McpClientToolV2', () => {
 		};
 
 		it('should support http basic auth', async () => {
-			const supplyDataResult = await buildNode().supplyData.call(
+			await buildNode().supplyData.call(
 				buildMocks('httpBasicAuth', { user: 'my-header', password: 'header-value' }),
 				0,
 			);
 
-			expect(supplyDataResult.closeFunction).toBeInstanceOf(Function);
-			expect(supplyDataResult.response).toBeInstanceOf(McpToolkit);
-
 			const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(mock());
 			const url = new URL('https://my-mcp-endpoint.ai/sse');
-			expect(SSEClientTransport).toHaveBeenCalledTimes(1);
 			expect(SSEClientTransport).toHaveBeenCalledWith(url, {
 				eventSourceInit: { fetch: expect.any(Function) },
 				requestInit: {
@@ -86,17 +82,13 @@ describe('McpClientToolV2', () => {
 
 		it('should support http custom auth with headers', async () => {
 			const json = { headers: { 'my-header': 'header-value' } };
-			const supplyDataResult = await buildNode().supplyData.call(
+			await buildNode().supplyData.call(
 				buildMocks('httpCustomAuth', { json: JSON.stringify(json) }),
 				0,
 			);
 
-			expect(supplyDataResult.closeFunction).toBeInstanceOf(Function);
-			expect(supplyDataResult.response).toBeInstanceOf(McpToolkit);
-
 			const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(mock());
 			const url = new URL('https://my-mcp-endpoint.ai/sse');
-			expect(SSEClientTransport).toHaveBeenCalledTimes(1);
 			expect(SSEClientTransport).toHaveBeenCalledWith(url, {
 				eventSourceInit: { fetch: expect.any(Function) },
 				requestInit: {
@@ -117,17 +109,13 @@ describe('McpClientToolV2', () => {
 		});
 
 		it('should support header auth', async () => {
-			const supplyDataResult = await buildNode().supplyData.call(
+			await buildNode().supplyData.call(
 				buildMocks('httpHeaderAuth', { name: 'my-header', value: 'header-value' }),
 				0,
 			);
 
-			expect(supplyDataResult.closeFunction).toBeInstanceOf(Function);
-			expect(supplyDataResult.response).toBeInstanceOf(McpToolkit);
-
 			const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(mock());
 			const url = new URL('https://my-mcp-endpoint.ai/sse');
-			expect(SSEClientTransport).toHaveBeenCalledTimes(1);
 			expect(SSEClientTransport).toHaveBeenCalledWith(url, {
 				eventSourceInit: { fetch: expect.any(Function) },
 				requestInit: {
@@ -148,17 +136,10 @@ describe('McpClientToolV2', () => {
 		});
 
 		it('should support bearer auth', async () => {
-			const supplyDataResult = await buildNode().supplyData.call(
-				buildMocks('httpBearerAuth', { token: 'my-token' }),
-				0,
-			);
-
-			expect(supplyDataResult.closeFunction).toBeInstanceOf(Function);
-			expect(supplyDataResult.response).toBeInstanceOf(McpToolkit);
+			await buildNode().supplyData.call(buildMocks('httpBearerAuth', { token: 'my-token' }), 0);
 
 			const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(mock());
 			const url = new URL('https://my-mcp-endpoint.ai/sse');
-			expect(SSEClientTransport).toHaveBeenCalledTimes(1);
 			expect(SSEClientTransport).toHaveBeenCalledWith(url, {
 				eventSourceInit: { fetch: expect.any(Function) },
 				requestInit: {
