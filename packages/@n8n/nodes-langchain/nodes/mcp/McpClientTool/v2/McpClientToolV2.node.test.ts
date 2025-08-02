@@ -1,10 +1,9 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { mock } from 'jest-mock-extended';
-import { NodeOperationError } from 'n8n-workflow';
+import { NodeOperationError, NodeConnectionTypes } from 'n8n-workflow';
 import type {
 	ICredentialDataDecryptedObject,
-	NodeConnectionTypes,
 	ILoadOptionsFunctions,
 	INode,
 	ISupplyDataFunctions,
@@ -86,8 +85,9 @@ describe('McpClientToolV2', () => {
 		});
 
 		it('should support http custom auth with headers', async () => {
+			const json = { headers: { 'my-header': 'header-value' } };
 			const supplyDataResult = await buildNode().supplyData.call(
-				buildMocks('httpCustomAuth', { headers: { 'my-header': 'header-value' } }),
+				buildMocks('httpCustomAuth', { json: JSON.stringify(json) }),
 				0,
 			);
 

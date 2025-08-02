@@ -9,6 +9,8 @@ import { Toolkit } from 'langchain/agents';
 import {
 	createResultError,
 	createResultOk,
+	IRequestOptionsSimplified,
+	jsonParse,
 	type IDataObject,
 	type IExecuteFunctions,
 	type Result,
@@ -224,6 +226,7 @@ export async function getAuthHeaders(
 			const genericCredentialType = ctx.getNodeParameter('genericAuthType', 0);
 
 			const credentials = await ctx.getCredentials(genericCredentialType as string, itemIndex);
+			ctx.logger.error(JSON.stringify(credentials));
 			if (!credentials) {
 				return {};
 			}
@@ -238,6 +241,13 @@ export async function getAuthHeaders(
 			} else if (genericCredentialType === 'httpHeaderAuth') {
 				const result: Record<string, string> = {};
 				result[credentials.name as string] = credentials.value as string;
+				return { headers: result };
+			} else if (genericCredentialType === 'httpCustomAuth') {
+				const customAuth = jsonParse<IRequestOptionsSimplified>(
+					(credentials.json as string) || '{}',
+					{ errorMessage: 'Invalid Custom Auth JSON' },
+				);
+				const result = { ...customAuth.headers } as Record<string, string>;
 				return { headers: result };
 			} else if (genericCredentialType === 'oAuth1Api') {
 				const oauth = new clientOAuth1({
