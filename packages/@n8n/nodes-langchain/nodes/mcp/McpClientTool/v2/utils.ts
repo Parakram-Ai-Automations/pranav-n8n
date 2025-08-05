@@ -292,13 +292,9 @@ export async function getAuthHeaders(
 					ignoreSSLIssues: credentials.ignoreSSLIssues as boolean,
 				});
 
-				try {
-					const token = await oauth2Client.credentials.getToken();
-					if (token.accessToken) {
-						return { headers: { Authorization: `Bearer ${token.accessToken}` } };
-					}
-				} catch (error) {
-					return {};
+				const token = await oauth2Client.credentials.getToken();
+				if (token.accessToken) {
+					return { headers: { Authorization: `Bearer ${token.accessToken}` } };
 				}
 			}
 			return {};

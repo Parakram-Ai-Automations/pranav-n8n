@@ -12,6 +12,7 @@ import type {
 import { getTools } from './loadOptions';
 import { McpClientToolV2 } from './McpClientToolV2.node';
 import { McpToolkit } from './utils';
+import nock from 'nock';
 
 jest.mock('@modelcontextprotocol/sdk/client/sse.js');
 jest.mock('@modelcontextprotocol/sdk/client/index.js');
@@ -131,6 +132,41 @@ describe('McpClientToolV2', () => {
 				headers: {
 					Accept: 'text/event-stream',
 					'my-header': 'header-value',
+				},
+			});
+		});
+
+		it('should support oauth 2', async () => {
+			nock('https://my-mcp-endpoint.ai').post('/token').reply(200, { access_token: 'my-token' });
+
+			await buildNode().supplyData.call(
+				buildMocks('oAuth2Api', {
+					clientId: 'id',
+					scopes: 'read',
+					clientSecret: 'secret',
+					authentication: 'header',
+					accessTokenUrl: 'https://my-mcp-endpoint.ai/token',
+				}),
+				0,
+			);
+
+			const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(mock());
+			const url = new URL('https://my-mcp-endpoint.ai/sse');
+			expect(SSEClientTransport).toHaveBeenCalledWith(url, {
+				eventSourceInit: { fetch: expect.any(Function) },
+				requestInit: {
+					headers: {
+						Authorization: 'Bearer my-token',
+					},
+				},
+			});
+
+			const customFetch = jest.mocked(SSEClientTransport).mock.calls[0][1]?.eventSourceInit?.fetch;
+			await customFetch?.(url);
+			expect(fetchSpy).toHaveBeenCalledWith(url, {
+				headers: {
+					Accept: 'text/event-stream',
+					Authorization: 'Bearer my-token',
 				},
 			});
 		});
