@@ -527,7 +527,10 @@ export class ChatTrigger extends Node {
 		const { data, files } = req.body;
 
 		const returnItem: INodeExecutionData = {
-			json: data,
+			json: {
+				...data,
+				headers: context.getHeaderData(),
+			},
 		};
 
 		if (files && Object.keys(files).length) {
@@ -727,7 +730,14 @@ export class ChatTrigger extends Node {
 			if (req.contentType === 'multipart/form-data') {
 				returnData = [await this.handleFormData(ctx)];
 			} else {
-				returnData = [{ json: bodyData }];
+				returnData = [
+					{
+						json: {
+							...bodyData,
+							headers: ctx.getHeaderData(),
+						},
+					},
+				];
 			}
 
 			return {
@@ -743,7 +753,14 @@ export class ChatTrigger extends Node {
 				workflowData: [returnData],
 			};
 		} else {
-			returnData = [{ json: bodyData }];
+			returnData = [
+				{
+					json: {
+						...bodyData,
+						headers: ctx.getHeaderData(),
+					},
+				},
+			];
 		}
 
 		return {
