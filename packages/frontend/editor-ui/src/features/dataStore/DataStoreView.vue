@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import ProjectHeader, { type CustomAction } from '@/components/Projects/ProjectHeader.vue';
-import ResourcesListLayout from '@/components/layouts/ResourcesListLayout.vue';
+import ProjectHeader from '@/components/Projects/ProjectHeader.vue';
 import InsightsSummary from '@/features/insights/components/InsightsSummary.vue';
 import { useProjectPages } from '@/composables/useProjectPages';
 import { useInsightsStore } from '@/features/insights/insights.store';
 
 import { useI18n } from '@n8n/i18n';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ProjectTypes } from '@/types/projects.types';
 import { useProjectsStore } from '@/stores/projects.store';
@@ -35,19 +34,12 @@ const dataStoreStore = useDataStoreStore();
 const insightsStore = useInsightsStore();
 const projectsStore = useProjectsStore();
 const sourceControlStore = useSourceControlStore();
+const uiStore = useUIStore();
 
 const loading = ref(true);
 
 const currentPage = ref(1);
 const pageSize = ref(DEFAULT_DATA_STORE_PAGE_SIZE);
-
-const customProjectActions = computed<CustomAction[]>(() => [
-	{
-		id: 'add-data-store',
-		label: i18n.baseText('dataStore.add.button.label'),
-		disabled: loading.value || projectPages.isOverviewSubPage,
-	},
-]);
 
 const dataStoreResources = computed<DataStoreResource[]>(() =>
 	dataStoreStore.dataStores.map((ds) => {
@@ -111,12 +103,12 @@ const onPaginationUpdate = async (payload: SortingAndPaginationUpdates) => {
 };
 
 const onAddModalClick = () => {
-	useUIStore().openModal(ADD_DATA_STORE_MODAL_KEY);
+	uiStore.openModal(ADD_DATA_STORE_MODAL_KEY);
 };
 
 const onProjectHeaderAction = (action: string) => {
 	if (action === 'add-data-store') {
-		useUIStore().openModal(ADD_DATA_STORE_MODAL_KEY);
+		uiStore.openModal(ADD_DATA_STORE_MODAL_KEY);
 	}
 };
 
@@ -141,6 +133,16 @@ const onCardRename = async (payload: { dataStore: DataStoreResource }) => {
 onMounted(() => {
 	documentTitle.set(i18n.baseText('dataStore.dataStores'));
 });
+
+watch(
+	() => route.params.new,
+	() => {
+		if (route.params.new === 'new') {
+			uiStore.openModal(ADD_DATA_STORE_MODAL_KEY);
+		}
+	},
+	{ immediate: true },
+);
 </script>
 <template>
 	<ResourcesListLayout
@@ -162,10 +164,7 @@ onMounted(() => {
 		@update:pagination-and-sort="onPaginationUpdate"
 	>
 		<template #header>
-			<ProjectHeader
-				:custom-actions="customProjectActions"
-				@custom-action-selected="onProjectHeaderAction"
-			>
+			<ProjectHeader>
 				<InsightsSummary
 					v-if="projectPages.isOverviewSubPage && insightsStore.isSummaryEnabled"
 					:loading="insightsStore.weeklySummary.isLoading"
