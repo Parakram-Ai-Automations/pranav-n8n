@@ -19,14 +19,6 @@ const props = withDefaults(defineProps<Props>(), {
 	showOwnershipBadge: false,
 });
 
-const emit = defineEmits<{
-	rename: [
-		value: {
-			dataStore: DataStoreResource;
-		},
-	];
-}>();
-
 const renameInput = useTemplateRef<{ forceFocus?: () => void }>('renameInput');
 
 const dataStoreRoute = computed(() => {
@@ -48,14 +40,6 @@ const onRename = () => {
 		}, 100);
 	}
 };
-
-const onNameSubmit = (name: string) => {
-	if (props.dataStore.name === name) return;
-
-	emit('rename', {
-		dataStore: { ...props.dataStore, name },
-	});
-};
 </script>
 <template>
 	<div data-test-id="data-store-card">
@@ -72,17 +56,9 @@ const onNameSubmit = (name: string) => {
 				</template>
 				<template #header>
 					<div :class="$style['card-header']" @click.prevent>
-						<N8nInlineTextEdit
-							ref="renameInput"
-							data-test-id="datastore-name-input"
-							:placeholder="i18n.baseText('dataStore.add.input.name.label')"
-							:class="$style['card-name']"
-							:model-value="props.dataStore.name"
-							:max-length="50"
-							:read-only="props.readOnly"
-							:disabled="props.readOnly"
-							@update:model-value="onNameSubmit"
-						/>
+						<n8n-text tag="h2" bold data-test-id="data-store-card-name">
+							{{ props.dataStore.name }}
+						</n8n-text>
 						<N8nBadge v-if="props.readOnly" class="ml-3xs" theme="tertiary" bold>
 							{{ i18n.baseText('workflows.item.readonly') }}
 						</N8nBadge>
@@ -156,12 +132,6 @@ const onNameSubmit = (name: string) => {
 	&:hover {
 		box-shadow: 0 2px 8px rgba(#441c17, 0.1);
 	}
-}
-
-.card-name {
-	color: $custom-font-dark;
-	font-size: var(--font-size-m);
-	margin-bottom: var(--spacing-5xs);
 }
 
 .card-icon {

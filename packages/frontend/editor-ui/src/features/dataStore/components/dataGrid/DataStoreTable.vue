@@ -16,6 +16,7 @@ import type {
 	ValueGetterParams,
 	RowSelectionOptions,
 	CellValueChangedEvent,
+	GetRowIdParams,
 } from 'ag-grid-community';
 import {
 	ModuleRegistry,
@@ -37,11 +38,12 @@ import AddColumnPopover from '@/features/dataStore/components/dataGrid/AddColumn
 import { useDataStoreStore } from '@/features/dataStore/dataStore.store';
 import { useI18n } from '@n8n/i18n';
 import { useToast } from '@/composables/useToast';
+import { DEFAULT_ID_COLUMN_NAME } from '@/features/dataStore/constants';
 import { useMessage } from '@/composables/useMessage';
 import { MODAL_CONFIRM } from '@/constants';
 import ColumnHeader from '@/features/dataStore/components/dataGrid/ColumnHeader.vue';
-import { DEFAULT_ID_COLUMN_NAME, NO_TABLE_YET_MESSAGE } from '@/features/dataStore/constants';
 import { useDataStoreTypes } from '@/features/dataStore/composables/useDataStoreTypes';
+import { isDataStoreValue } from '@/features/dataStore/typeGuards';
 
 // Register only the modules we actually use
 ModuleRegistry.registerModules([
@@ -81,15 +83,15 @@ const gridApi = ref<GridApi | null>(null);
 const colDefs = ref<ColDef[]>([]);
 const rowData = ref<DataStoreRow[]>([]);
 const rowSelection: RowSelectionOptions | 'single' | 'multiple' = {
-	mode: 'singleRow',
-	enableClickSelection: true,
-	checkboxes: false,
+	mode: 'multiRow',
+	enableClickSelection: false,
+	checkboxes: true,
 };
 
 const contentLoading = ref(false);
 
 // Shared config for all columns
-const defaultColumnDef = {
+const defaultColumnDef: ColDef = {
 	flex: 1,
 	sortable: false,
 	filter: false,
@@ -252,16 +254,18 @@ const onAddRowClick = async () => {
 		if (currentPage.value * pageSize.value < totalItems.value) {
 			await setCurrentPage(Math.ceil(totalItems.value / pageSize.value));
 		}
+		contentLoading.value = true;
+		emit('toggleSave', true);
 		const inserted = await dataStoreStore.insertEmptyRow(props.dataStore);
 		if (!inserted) {
 			throw new Error(i18n.baseText('generic.unknownError'));
 		}
-		emit('toggleSave', true);
 		await fetchDataStoreContent();
 	} catch (error) {
 		toast.showError(error, i18n.baseText('dataStore.addRow.error'));
 	} finally {
 		emit('toggleSave', false);
+		contentLoading.value = false;
 	}
 };
 
@@ -288,15 +292,24 @@ const initColumnDefinitions = () => {
 	];
 };
 
-const onCellValueChanged = async (params: CellValueChangedEvent) => {
-	const { data, api } = params;
+const onCellValueChanged = async (params: CellValueChangedEvent<DataStoreRow>) => {
+	const { data, api, oldValue, value, colDef } = params;
+
+	if (value === oldValue) {
+		return;
+	}
 
 	try {
 		emit('toggleSave', true);
 		await dataStoreStore.upsertRow(props.dataStore.id, props.dataStore.projectId, data);
 	} catch (error) {
 		// Revert cell to original value if the update fails
-		api.undoCellEditing();
+		const fieldName = String(colDef.field);
+		const validOldValue = isDataStoreValue(oldValue) ? oldValue : null;
+		const revertedData: DataStoreRow = { ...data, [fieldName]: validOldValue };
+		api.applyTransaction({
+			update: [revertedData],
+		});
 		toast.showError(error, i18n.baseText('dataStore.updateRow.error'));
 	} finally {
 		emit('toggleSave', false);
@@ -316,11 +329,7 @@ const fetchDataStoreContent = async () => {
 		totalItems.value = fetchedRows.count;
 		rowData.value = rows.value;
 	} catch (error) {
-		// TODO: We currently don't create user tables until user columns or rows are added
-		// so we need to ignore NO_TABLE_YET_MESSAGE error here
-		if ('message' in error && !error.message.includes(NO_TABLE_YET_MESSAGE)) {
-			toast.showError(error, i18n.baseText('dataStore.fetchContent.error'));
-		}
+		toast.showError(error, i18n.baseText('dataStore.fetchContent.error'));
 	} finally {
 		contentLoading.value = false;
 		if (gridApi.value) {
@@ -355,7 +364,7 @@ onMounted(async () => {
 				:suppress-drag-leave-hides-columns="true"
 				:loading="contentLoading"
 				:row-selection="rowSelection"
-				:get-row-id="(params) => String(params.data.id)"
+				:get-row-id="(params: GetRowIdParams) => String(params.data.id)"
 				:single-click-edit="true"
 				:stop-editing-when-cells-lose-focus="true"
 				:undo-redo-cell-editing="true"
@@ -429,6 +438,15 @@ onMounted(async () => {
 
 	:global(.ag-header-cell-resize) {
 		width: var(--spacing-4xs);
+	}
+
+	// Don't show borders for the checkbox cells
+	:global(.ag-cell[col-id='ag-Grid-SelectionColumn']) {
+		border: none;
+	}
+
+	:global(.ag-cell[col-id='ag-Grid-SelectionColumn'].ag-cell-focus) {
+		outline: none;
 	}
 }
 
